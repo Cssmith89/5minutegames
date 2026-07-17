@@ -23,7 +23,7 @@ export const games: GameEntry[] = [
     ],
     thumbnail: "/games/dungeon-crawler/thumbnail.png",
     buildPath: "/games/dungeon-crawler/build",
-    status: "coming-soon",
+    status: "playable",
   },
 ];
 
