@@ -33,26 +33,44 @@ user-generated content.
 3. Append a `GameEntry` to `src/lib/games.ts` with `status: "playable"`.
 4. `npm run dev` and check `/games/<slug>` locally before pushing.
 
-## Exporting a Godot game to Web (manual, one-time setup + per-release)
+## Exporting a Godot game to Web
 
-Godot doesn't have a locatable CLI on this machine, so exporting is done from the
-editor GUI:
+**Important:** Godot's Web export only works from the **standard** editor build,
+never the Mono/.NET build — this is a hard engine limitation (no Web export
+templates are built for Mono at all), independent of whether the project itself
+uses C#. The Dungeon Crawler project is pure GDScript, so this costs nothing.
 
-1. Open the project in Godot. **Editor → Manage Export Templates** → install the
-   templates matching the project's Godot version (one-time, ~1-2GB download).
-2. **Project → Export... → Add... → Web** to create a Web export preset.
-   - Leave **Threads Support unchecked** — this keeps the build off
-     `SharedArrayBuffer`, so no `Cross-Origin-Opener-Policy` /
-     `Cross-Origin-Embedder-Policy` headers are needed on this site.
-   - Set the export path/base filename to the game's slug (e.g.
-     `dungeon-crawler`) so exported files are named predictably.
-3. **Export Project**. Confirm the output has `index.html`, a `.wasm`, a `.pck`,
-   and a `.js` file.
-4. Smoke-test the export standalone before touching this repo: serve the export
+A standard (non-Mono) Godot 4.2.2 editor and its Web export templates are
+already installed for headless/CLI exporting:
+
+- Editor: `C:\Users\cssmi\AppData\Local\Godot-tools\Godot_v4.2.2-stable_win64_console.exe`
+- Templates: `%APPDATA%\Godot\export_templates\4.2.2.stable\`
+- `export_presets.cfg` already exists in the Dungeon Crawler project with a
+  `Web` preset (Threads Support off, so the build never needs
+  `SharedArrayBuffer` — no `Cross-Origin-Opener-Policy` /
+  `Cross-Origin-Embedder-Policy` headers needed on this site).
+
+To re-export after changing the game:
+
+```
+"C:\Users\cssmi\AppData\Local\Godot-tools\Godot_v4.2.2-stable_win64_console.exe" ^
+  --headless --path "C:\Users\cssmi\OneDrive\Documents\Claude files\Dungeon Crawler" ^
+  --export-release "Web" "export/web/dungeon-crawler.html"
+```
+
+Then:
+1. Smoke-test the export standalone before touching this repo: serve the export
    folder with a real static server (e.g. `npx serve <folder>`) — opening
    `index.html` directly via `file://` will not work, WASM/fetch loading
    requires HTTP.
-5. Copy the export output into `public/games/<slug>/build/` here.
+2. Copy the export output into `public/games/<slug>/build/` here, renaming the
+   `.html` file to `index.html` (everything else keeps its exported name).
+
+For a brand-new game (not yet exported once), add a Web preset the same way —
+either by hand-writing `export_presets.cfg` (see the Dungeon Crawler one as a
+reference for the format) or via **Project → Export... → Add... → Web** in the
+editor GUI, which is more reliable if the format ever changes in a future
+Godot version.
 
 Godot's exported filenames aren't content-hashed, so after re-exporting an
 existing game, browsers may briefly serve a stale cached `.pck` against a new
