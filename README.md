@@ -46,9 +46,17 @@ already installed for headless/CLI exporting:
 - Editor: `C:\Users\cssmi\AppData\Local\Godot-tools\Godot_v4.2.2-stable_win64_console.exe`
 - Templates: `%APPDATA%\Godot\export_templates\4.2.2.stable\`
 - `export_presets.cfg` already exists in the Dungeon Crawler project with a
-  `Web` preset (Threads Support off, so the build never needs
-  `SharedArrayBuffer` — no `Cross-Origin-Opener-Policy` /
-  `Cross-Origin-Embedder-Policy` headers needed on this site).
+  `Web` preset (Threads Support off).
+
+Note: Godot 4's web runtime needs the page to be **cross-origin isolated**
+(`SharedArrayBuffer`) unconditionally at the engine level — this is required
+even with Threads Support off in the preset (confirmed by testing in a real
+browser: without it, the game fails to boot with a "Cross Origin Isolation /
+SharedArrayBuffer" error). `next.config.ts` sends
+`Cross-Origin-Opener-Policy: same-origin` and
+`Cross-Origin-Embedder-Policy: require-corp` site-wide to cover this — already
+handled, nothing to do per-game, but worth knowing if a future game's build
+seems to hang on load.
 
 To re-export after changing the game:
 
