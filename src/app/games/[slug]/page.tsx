@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import GamePlayer from "@/components/GamePlayer";
 import { games, getGame } from "@/lib/games";
+import { createClient } from "@/lib/supabase/server";
+import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 
 export function generateStaticParams() {
   return games.map((game) => ({ slug: game.slug }));
@@ -31,6 +33,9 @@ export default async function GamePage({
   if (!game) notFound();
 
   const isPlayable = game.status === "playable";
+  const loggedIn = isSupabaseConfigured()
+    ? !!(await (await createClient()).auth.getUser()).data.user
+    : false;
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
@@ -41,7 +46,12 @@ export default async function GamePage({
 
       <div className="mt-8">
         {isPlayable ? (
-          <GamePlayer title={game.title} buildPath={game.buildPath} />
+          <GamePlayer
+            title={game.title}
+            slug={game.slug}
+            buildPath={game.buildPath}
+            loggedIn={loggedIn}
+          />
         ) : (
           <div className="flex aspect-video w-full items-center justify-center rounded-lg border border-neutral-800 bg-neutral-900">
             <span className="font-mono text-sm text-neutral-500">
