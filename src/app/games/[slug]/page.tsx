@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import GamePlayer from "@/components/GamePlayer";
+import { NativeGameRenderer } from "@/components/games/registry";
 import { games, getGame } from "@/lib/games";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
@@ -45,19 +46,21 @@ export default async function GamePage({
       <p className="mt-1 text-neutral-400">{game.tagline}</p>
 
       <div className="mt-8">
-        {isPlayable ? (
-          <GamePlayer
-            title={game.title}
-            slug={game.slug}
-            buildPath={game.buildPath}
-            loggedIn={loggedIn}
-          />
-        ) : (
+        {!isPlayable ? (
           <div className="flex aspect-video w-full items-center justify-center rounded-lg border border-neutral-800 bg-neutral-900">
             <span className="font-mono text-sm text-neutral-500">
               Coming soon
             </span>
           </div>
+        ) : game.kind === "iframe" ? (
+          <GamePlayer
+            title={game.title}
+            slug={game.slug}
+            buildPath={game.buildPath!}
+            loggedIn={loggedIn}
+          />
+        ) : (
+          <NativeGameRenderer slug={game.slug} />
         )}
       </div>
 

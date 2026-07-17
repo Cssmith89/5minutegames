@@ -5,8 +5,11 @@ export interface GameEntry {
   description: string;
   controls: string[];
   thumbnail: string;
-  buildPath: string;
   status: "playable" | "coming-soon";
+  /** "iframe" games load a static build via GamePlayer; "component" games render a native React component from the game registry. */
+  kind: "iframe" | "component";
+  /** Required when kind is "iframe". */
+  buildPath?: string;
 }
 
 export const games: GameEntry[] = [
@@ -22,7 +25,21 @@ export const games: GameEntry[] = [
       "Esc — pause / open menu",
     ],
     thumbnail: "/games/dungeon-crawler/thumbnail.png",
+    kind: "iframe",
     buildPath: "/games/dungeon-crawler/build",
+    status: "playable",
+  },
+  {
+    slug: "reflex-test",
+    title: "Reflex Test",
+    tagline: "Endless aim trainer — how many waves can you clear?",
+    description:
+      "Hit targets in numeric order as waves ramp up forever — more targets first, then faster. You start with 3 lives (up to 5): missing one costs a life at the end of that wave, but clean streaks earn lives back. See how far you can go.",
+    controls: [
+      "Mouse / touch — click or tap targets in order",
+    ],
+    thumbnail: "/games/reflex-test/thumbnail.png",
+    kind: "component",
     status: "playable",
   },
 ];
