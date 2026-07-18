@@ -10,6 +10,18 @@ const nativeGameComponents: Record<string, ComponentType<{ slug: string }>> = {
   "reflex-test": dynamic(() => import("./reflex-test/ReflexTest"), {
     ssr: false,
   }),
+  "speed-match": dynamic(() => import("./speed-match/SpeedMatch"), {
+    ssr: false,
+  }),
+  "color-match": dynamic(() => import("./color-match/ColorMatch"), {
+    ssr: false,
+  }),
+  "memory-matrix": dynamic(() => import("./memory-matrix/MemoryMatrix"), {
+    ssr: false,
+  }),
+  raindrops: dynamic(() => import("./raindrops/Raindrops"), {
+    ssr: false,
+  }),
 };
 
 // The registry lookup has to happen inside a Client Component: passing a

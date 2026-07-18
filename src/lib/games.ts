@@ -42,6 +42,50 @@ export const games: GameEntry[] = [
     kind: "component",
     status: "playable",
   },
+  {
+    slug: "speed-match",
+    title: "Quick Match",
+    tagline: "Does it match the last one? Answer fast — it only gets faster.",
+    description:
+      "A symbol appears every couple seconds — say whether it matches the one shown right before it. Every correct streak shrinks the time you get to answer. You start with 3 lives; a wrong or missed answer costs one.",
+    controls: ["Mouse / touch — tap Match or No Match"],
+    thumbnail: "/games/speed-match/thumbnail.png",
+    kind: "component",
+    status: "playable",
+  },
+  {
+    slug: "color-match",
+    title: "Ink Trap",
+    tagline: "Does the ink match the word? Answer before the clock runs out.",
+    description:
+      "A color word appears printed in its own ink color — say whether the ink matches what the word says. The shrinking time bar is the real challenge here. You start with 3 lives; a wrong or missed answer costs one.",
+    controls: ["Mouse / touch — tap Match or No Match"],
+    thumbnail: "/games/color-match/thumbnail.png",
+    kind: "component",
+    status: "playable",
+  },
+  {
+    slug: "memory-matrix",
+    title: "Grid Recall",
+    tagline: "Memorize the lit tiles, then click them back from memory.",
+    description:
+      "A grid flashes a handful of lit tiles, then clears — click the same tiles back from memory. Clearing a level grows the grid or the number of tiles to remember. One wrong click ends the run.",
+    controls: ["Mouse / touch — click the tiles you remember"],
+    thumbnail: "/games/memory-matrix/thumbnail.png",
+    kind: "component",
+    status: "playable",
+  },
+  {
+    slug: "raindrops",
+    title: "Number Rain",
+    tagline: "Solve the falling equations before they hit the ground.",
+    description:
+      "Equations fall from the top of the screen — pick the correct answer from 4 choices before the oldest one lands. Fall speed climbs with your score, and operations get harder in tiers: addition, then subtraction, then multiplication.",
+    controls: ["Mouse / touch — click the correct answer"],
+    thumbnail: "/games/raindrops/thumbnail.png",
+    kind: "component",
+    status: "playable",
+  },
 ];
 
 export function getGame(slug: string): GameEntry | undefined {
