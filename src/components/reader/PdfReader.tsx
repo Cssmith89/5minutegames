@@ -47,6 +47,8 @@ async function resolveOutline(pdf: PDFDocumentProxy): Promise<TocEntry[]> {
 }
 
 const DRAG_THRESHOLD = 80;
+const TAP_THRESHOLD = 10;
+const EDGE_TAP_ZONE = 0.28;
 const CHROME_HIDE_DELAY = 2500;
 const WHEEL_THRESHOLD = 24;
 const WHEEL_COOLDOWN_MS = 450;
@@ -76,6 +78,7 @@ export default function PdfReader({
     return stored === "light" ? "light" : "dark";
   });
   const [pageWidth, setPageWidth] = useState(600);
+  const [panelTop, setPanelTop] = useState(64);
   const [pageAspect, setPageAspect] = useState(1.4); // height / width, refined once the doc loads
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -122,6 +125,9 @@ export default function PdfReader({
       const widthLimit = Math.min(window.innerWidth - 64, 800);
       const heightLimit = (window.innerHeight - topChrome - bottomChrome) / pageAspect;
       setPageWidth(Math.max(Math.min(widthLimit, heightLimit), 200));
+      // The top bar wraps onto a second line on narrow phones/tablets, so its
+      // height isn't fixed -- measure it instead of assuming a single row.
+      setPanelTop((topChromeRef.current?.offsetHeight ?? 56) + 8);
     }
     updateWidth();
     window.addEventListener("resize", updateWidth);
@@ -395,6 +401,11 @@ export default function PdfReader({
     dragStartX.current = event.clientX;
     setDragging(true);
     resetChromeTimer();
+    // Pointer capture keeps drag/tap tracking on this container even when the
+    // finger is over a PDF.js text-layer span underneath -- without it, touch
+    // drags on tablets intermittently get swallowed by text selection instead
+    // of turning the page.
+    event.currentTarget.setPointerCapture(event.pointerId);
   }
 
   function onPointerMove(event: React.PointerEvent) {
@@ -403,7 +414,13 @@ export default function PdfReader({
     setDragX(event.clientX - dragStartX.current);
   }
 
-  function endDrag() {
+  function cancelDrag() {
+    dragStartX.current = null;
+    setDragging(false);
+    setDragX(0);
+  }
+
+  function endDrag(event: React.PointerEvent) {
     if (dragStartX.current === null) return;
     if (hasActiveSelection()) {
       const selection = window.getSelection()!;
@@ -433,8 +450,30 @@ export default function PdfReader({
       setDragX(0);
       return;
     }
-    if (dragX <= -DRAG_THRESHOLD) goToPage(currentPage + 1);
-    else if (dragX >= DRAG_THRESHOLD) goToPage(currentPage - 1);
+    if (dragX <= -DRAG_THRESHOLD) {
+      goToPage(currentPage + 1);
+    } else if (dragX >= DRAG_THRESHOLD) {
+      goToPage(currentPage - 1);
+    } else if (
+      Math.abs(dragX) < TAP_THRESHOLD &&
+      (event.pointerType === "touch" || event.pointerType === "pen")
+    ) {
+      // A tap (not a drag) on a touch/pen device: left/right edges turn the
+      // page like a typical e-reader, the middle band toggles the toolbars.
+      const container = containerRef.current;
+      const containerRect = container?.getBoundingClientRect();
+      if (containerRect && containerRect.width > 0) {
+        const relativeX = (event.clientX - containerRect.left) / containerRect.width;
+        if (relativeX <= EDGE_TAP_ZONE) {
+          goToPage(currentPage - 1);
+        } else if (relativeX >= 1 - EDGE_TAP_ZONE) {
+          goToPage(currentPage + 1);
+        } else {
+          setChromeVisible((visible) => !visible);
+          if (hideTimeout.current) clearTimeout(hideTimeout.current);
+        }
+      }
+    }
     dragStartX.current = null;
     setDragging(false);
     setDragX(0);
@@ -471,14 +510,14 @@ export default function PdfReader({
 
   return (
     <div ref={shellRef} className="fixed inset-0 flex flex-col bg-neutral-950 text-neutral-100">
-      <div ref={topChromeRef} className={`${chromeClass} top-0 flex items-center justify-between gap-4 px-6 py-3`}>
+      <div ref={topChromeRef} className={`${chromeClass} top-0 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-6`}>
         <div className="min-w-0">
           <Link href="/books" className="text-sm text-neutral-500 hover:text-neutral-300">
             ← Books
           </Link>
           <h1 className="truncate text-lg font-semibold text-neutral-100">{title}</h1>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-wrap shrink-0 items-center justify-end gap-2">
           <button
             type="button"
             onClick={() => {
@@ -486,7 +525,7 @@ export default function PdfReader({
               setShowSearch(false);
               setShowSaved(false);
             }}
-            className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:border-neutral-600"
+            className="touch-manipulation rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-600"
           >
             Contents
           </button>
@@ -497,7 +536,7 @@ export default function PdfReader({
               setShowToc(false);
               setShowSaved(false);
             }}
-            className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:border-neutral-600"
+            className="touch-manipulation rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-600"
           >
             Search
           </button>
@@ -508,28 +547,28 @@ export default function PdfReader({
               setShowToc(false);
               setShowSearch(false);
             }}
-            className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:border-neutral-600"
+            className="touch-manipulation rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-600"
           >
             Saved
           </button>
           <button
             type="button"
             onClick={toggleBookmark}
-            className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:border-neutral-600"
+            className="touch-manipulation rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-600"
           >
             {bookmarkedPages.has(currentPage) ? "★ Bookmarked" : "☆ Bookmark"}
           </button>
           <button
             type="button"
             onClick={toggleFullscreen}
-            className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:border-neutral-600"
+            className="touch-manipulation rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-600"
           >
             {isFullscreen ? "Exit fullscreen" : "Fullscreen"}
           </button>
           <button
             type="button"
             onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
-            className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:border-neutral-600"
+            className="touch-manipulation rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-600"
           >
             {theme === "dark" ? "Light mode" : "Dark mode"}
           </button>
@@ -537,7 +576,7 @@ export default function PdfReader({
             type="button"
             onClick={enterReadingMode}
             title="Hide all UI — press Esc to bring it back"
-            className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:border-neutral-600"
+            className="touch-manipulation rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-600"
           >
             Reading mode
           </button>
@@ -545,7 +584,7 @@ export default function PdfReader({
       </div>
 
       {showToc && !readingMode && (
-        <div className="fixed inset-x-0 top-16 z-50 mx-auto w-full max-w-md px-6">
+        <div style={{ top: panelTop }} className="fixed inset-x-0 z-50 mx-auto w-full max-w-md px-6">
           <div className="rounded-md border border-neutral-800 bg-neutral-900 p-3 shadow-lg">
             <div className="flex flex-col gap-2">
               <label className="flex items-center gap-2 text-sm text-neutral-400">
@@ -588,7 +627,7 @@ export default function PdfReader({
       )}
 
       {showSearch && !readingMode && (
-        <div className="fixed inset-x-0 top-16 z-50 mx-auto w-full max-w-md px-6">
+        <div style={{ top: panelTop }} className="fixed inset-x-0 z-50 mx-auto w-full max-w-md px-6">
           <div className="rounded-md border border-neutral-800 bg-neutral-900 p-3 shadow-lg">
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
@@ -606,7 +645,7 @@ export default function PdfReader({
                 <button
                   type="button"
                   onClick={() => runSearch(searchQuery)}
-                  className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:border-neutral-600"
+                  className="touch-manipulation rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-600"
                 >
                   Search
                 </button>
@@ -663,7 +702,7 @@ export default function PdfReader({
       )}
 
       {showSaved && !readingMode && (
-        <div className="fixed inset-x-0 top-16 z-50 mx-auto w-full max-w-md px-6">
+        <div style={{ top: panelTop }} className="fixed inset-x-0 z-50 mx-auto w-full max-w-md px-6">
           <div className="rounded-md border border-neutral-800 bg-neutral-900 p-3 shadow-lg">
             <div className="flex flex-col gap-3">
               <div>
@@ -764,12 +803,39 @@ export default function PdfReader({
 
       <div
         ref={containerRef}
-        className="flex flex-1 select-none items-center justify-center overflow-y-auto overflow-x-hidden"
+        className="relative flex flex-1 select-none items-center justify-center overflow-y-auto overflow-x-hidden touch-manipulation"
+        style={{ touchAction: "pan-y" }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
-        onPointerLeave={endDrag}
+        onPointerCancel={cancelDrag}
       >
+        {!readingMode && (
+          <>
+            <button
+              type="button"
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage <= 1}
+              aria-label="Previous page"
+              className={`fixed left-2 top-1/2 z-40 flex h-12 w-12 -translate-y-1/2 touch-manipulation items-center justify-center rounded-full border border-neutral-700 bg-neutral-900/70 text-2xl text-neutral-200 backdrop-blur-sm transition-opacity duration-300 hover:border-neutral-600 disabled:opacity-0 sm:h-11 sm:w-11 ${
+                chromeVisible ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={!numPages || currentPage >= numPages}
+              aria-label="Next page"
+              className={`fixed right-2 top-1/2 z-40 flex h-12 w-12 -translate-y-1/2 touch-manipulation items-center justify-center rounded-full border border-neutral-700 bg-neutral-900/70 text-2xl text-neutral-200 backdrop-blur-sm transition-opacity duration-300 hover:border-neutral-600 disabled:opacity-0 sm:h-11 sm:w-11 ${
+                chromeVisible ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              ›
+            </button>
+          </>
+        )}
         {fileUrl && (
           <Document file={fileUrl} onLoadSuccess={onDocumentLoad} loading="Loading…">
             <div
@@ -838,12 +904,12 @@ export default function PdfReader({
         </button>
       )}
 
-      <div ref={bottomChromeRef} className={`${chromeClass} bottom-0 flex items-center justify-between px-6 py-3`}>
+      <div ref={bottomChromeRef} className={`${chromeClass} bottom-0 flex items-center justify-between px-4 py-3 sm:px-6`}>
         <button
           type="button"
           onClick={() => goToPage(currentPage - 1)}
           disabled={currentPage <= 1}
-          className="rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-600 disabled:opacity-40"
+          className="touch-manipulation rounded-md border border-neutral-700 px-4 py-2.5 text-sm text-neutral-200 hover:border-neutral-600 disabled:opacity-40"
         >
           Prev
         </button>
@@ -855,7 +921,7 @@ export default function PdfReader({
           type="button"
           onClick={() => goToPage(currentPage + 1)}
           disabled={!numPages || currentPage >= numPages}
-          className="rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-600 disabled:opacity-40"
+          className="touch-manipulation rounded-md border border-neutral-700 px-4 py-2.5 text-sm text-neutral-200 hover:border-neutral-600 disabled:opacity-40"
         >
           Next
         </button>
