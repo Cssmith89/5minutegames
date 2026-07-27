@@ -486,6 +486,12 @@ export default function PdfReader({
   const chromeClass = `fixed inset-x-0 z-50 bg-neutral-900/90 backdrop-blur-sm transition-opacity duration-300 ${
     chromeVisible && !readingMode ? "opacity-100" : "pointer-events-none opacity-0"
   }`;
+  // The page slider lives in the bottom bar and stays available even in
+  // reading mode -- unlike the rest of the chrome, it isn't forced hidden by
+  // `readingMode`, it just fades with normal inactivity like everywhere else.
+  const bottomChromeClass = `fixed inset-x-0 z-50 bg-neutral-900/90 backdrop-blur-sm transition-opacity duration-300 ${
+    chromeVisible ? "opacity-100" : "pointer-events-none opacity-0"
+  }`;
   const currentPageHighlights = highlights.filter(
     (highlight) => highlight.pageNumber === currentPage,
   );
@@ -919,7 +925,7 @@ export default function PdfReader({
         </button>
       )}
 
-      <div ref={bottomChromeRef} className={`${chromeClass} bottom-0 flex flex-col gap-2 px-4 py-3 sm:px-6`}>
+      <div ref={bottomChromeRef} className={`${bottomChromeClass} bottom-0 flex flex-col gap-2 px-4 py-3 sm:px-6`}>
         <div className="flex items-center gap-3">
           <span className="w-7 shrink-0 text-right text-xs tabular-nums text-neutral-500">
             {currentPage}
