@@ -18,3 +18,25 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+.react-pdf__Page__textContent ::selection {
+  background: rgba(34, 211, 238, 0.4);
+}
+
+.textLayer,
+.textLayer span,
+.textLayer br {
+  user-select: text;
+}
+
+.reader-search-mark {
+  background: #facc15;
+  color: #1c1917;
+  border-radius: 2px;
+}
+
+.reader-highlight-mark {
+  background: rgba(217, 119, 6, 0.45);
+  color: inherit;
+  border-radius: 2px;
+}

@@ -21,6 +21,9 @@ export default async function Header() {
           <Link href="/" className="transition-colors hover:text-neutral-100">
             All Games
           </Link>
+          <Link href="/books" className="transition-colors hover:text-neutral-100">
+            Books
+          </Link>
           {user ? (
             <div className="flex items-center gap-3">
               <Link href="/account" className="transition-colors hover:text-neutral-100">
