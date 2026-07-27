@@ -468,6 +468,10 @@ export default function PdfReader({
           goToPage(currentPage - 1);
         } else if (relativeX >= 1 - EDGE_TAP_ZONE) {
           goToPage(currentPage + 1);
+        } else if (readingMode) {
+          // Reading mode hides the toolbars entirely, so on a touchscreen
+          // (no Escape key) a center tap is the only way back out.
+          setReadingMode(false);
         } else {
           setChromeVisible((visible) => !visible);
           if (hideTimeout.current) clearTimeout(hideTimeout.current);
@@ -836,6 +840,17 @@ export default function PdfReader({
             </button>
           </>
         )}
+        {readingMode && (
+          <button
+            type="button"
+            onClick={() => setReadingMode(false)}
+            aria-label="Exit reading mode"
+            title="Exit reading mode"
+            className="fixed right-3 top-3 z-40 flex h-10 w-10 touch-manipulation items-center justify-center rounded-full border border-neutral-700 bg-neutral-900/60 text-lg text-neutral-400 opacity-40 backdrop-blur-sm transition-opacity hover:opacity-100"
+          >
+            ×
+          </button>
+        )}
         {fileUrl && (
           <Document file={fileUrl} onLoadSuccess={onDocumentLoad} loading="Loading…">
             <div
@@ -904,27 +919,47 @@ export default function PdfReader({
         </button>
       )}
 
-      <div ref={bottomChromeRef} className={`${chromeClass} bottom-0 flex items-center justify-between px-4 py-3 sm:px-6`}>
-        <button
-          type="button"
-          onClick={() => goToPage(currentPage - 1)}
-          disabled={currentPage <= 1}
-          className="touch-manipulation rounded-md border border-neutral-700 px-4 py-2.5 text-sm text-neutral-200 hover:border-neutral-600 disabled:opacity-40"
-        >
-          Prev
-        </button>
-        <span className="text-sm text-neutral-500">
-          Page {currentPage}
-          {numPages ? ` of ${numPages}` : ""}
-        </span>
-        <button
-          type="button"
-          onClick={() => goToPage(currentPage + 1)}
-          disabled={!numPages || currentPage >= numPages}
-          className="touch-manipulation rounded-md border border-neutral-700 px-4 py-2.5 text-sm text-neutral-200 hover:border-neutral-600 disabled:opacity-40"
-        >
-          Next
-        </button>
+      <div ref={bottomChromeRef} className={`${chromeClass} bottom-0 flex flex-col gap-2 px-4 py-3 sm:px-6`}>
+        <div className="flex items-center gap-3">
+          <span className="w-7 shrink-0 text-right text-xs tabular-nums text-neutral-500">
+            {currentPage}
+          </span>
+          <input
+            type="range"
+            min={1}
+            max={numPages ?? 1}
+            value={Math.min(currentPage, numPages ?? currentPage)}
+            disabled={!numPages}
+            onChange={(event) => goToPage(Number(event.target.value))}
+            aria-label="Page position"
+            className="h-6 w-full flex-1 touch-manipulation accent-accent disabled:opacity-40"
+          />
+          <span className="w-7 shrink-0 text-xs tabular-nums text-neutral-500">
+            {numPages ?? "—"}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => goToPage(currentPage - 1)}
+            disabled={currentPage <= 1}
+            className="touch-manipulation rounded-md border border-neutral-700 px-4 py-2.5 text-sm text-neutral-200 hover:border-neutral-600 disabled:opacity-40"
+          >
+            Prev
+          </button>
+          <span className="text-sm text-neutral-500">
+            Page {currentPage}
+            {numPages ? ` of ${numPages}` : ""}
+          </span>
+          <button
+            type="button"
+            onClick={() => goToPage(currentPage + 1)}
+            disabled={!numPages || currentPage >= numPages}
+            className="touch-manipulation rounded-md border border-neutral-700 px-4 py-2.5 text-sm text-neutral-200 hover:border-neutral-600 disabled:opacity-40"
+          >
+            Next
+          </button>
+        </div>
       </div>
     </div>
   );
